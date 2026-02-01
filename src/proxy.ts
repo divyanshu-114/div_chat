@@ -31,7 +31,7 @@ export const proxy = async (req: NextRequest) => {
 
   // Check room capacity (max 2)
   const count = await redis.scard(connectedKey(roomId))
-  if (count >= 2) {
+  if (count >= 3) {
     return NextResponse.redirect(new URL("/?error=room-full", req.url))
   }
 
