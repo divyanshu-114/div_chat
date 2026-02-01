@@ -1,5 +1,5 @@
 import { redis } from "@/lib/redis"
-import { Elysia, t } from "elysia"
+import { Elysia} from "elysia"
 import { nanoid } from "nanoid"
 import { authMiddleware } from "./auth"
 import { z } from "zod"
