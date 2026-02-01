@@ -1,5 +1,5 @@
 import { redis } from "@/lib/redis"
-import Elysia from "elysia"
+import { Elysia } from "elysia"
 
 class AuthError extends Error {
   constructor(message: string) {
@@ -7,6 +7,9 @@ class AuthError extends Error {
     this.name = "AuthError"
   }
 }
+
+const connectedKey = (roomId: string) => `connected:${roomId}`
+const metaKey = (roomId: string) => `meta:${roomId}`
 
 export const authMiddleware = new Elysia({ name: "auth" })
   .error({ AuthError })
@@ -18,17 +21,21 @@ export const authMiddleware = new Elysia({ name: "auth" })
   })
   .derive({ as: "scoped" }, async ({ query, cookie }) => {
     const roomId = query.roomId
-    const token = cookie["x-auth-token"].value as string | undefined
+    const token = cookie["x-auth-token"]?.value as string | undefined
 
     if (!roomId || !token) {
       throw new AuthError("Missing roomId or token.")
     }
 
-    const connected = await redis.hget<string[]>(`meta:${roomId}`, "connected")
+    const roomExists = await redis.exists(metaKey(roomId))
+    if (!roomExists) {
+      throw new AuthError("Room does not exist.")
+    }
 
-    if (!connected?.includes(token)) {
+    const isAllowed = await redis.sismember(connectedKey(roomId), token)
+    if (!isAllowed) {
       throw new AuthError("Invalid token")
     }
 
-    return { auth: { roomId, token, connected } }
+    return { auth: { roomId, token } }
   })
